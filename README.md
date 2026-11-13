@@ -9,6 +9,7 @@ Currently under development.
 - Create products
 - Validate product details, prices and stock quantities
 - Return validation errors by field
+- Reject duplicate product SKUs with HTTP 409
 
 ## Tech stack
 
