@@ -7,41 +7,32 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import dev.stockflow.model.Product;
-
-import java.math.BigDecimal;
-
-import java.util.ArrayList;
+import dev.stockflow.repository.ProductRepository;
 
 import dev.stockflow.dto.CreateProductRequest;
 
 @Service 
 public class ProductService {
 
-    private final List<Product> products = new ArrayList<>(List.of(
-        new Product(1L, "KB-001", "Mechanical Keyboard", new BigDecimal("79.90"), 10),
-        new Product(2L, "MS-001", "Wireless Mouse", new BigDecimal("24.50"), 20)
-    ));
+    private final ProductRepository productRepository;
 
-    private long nextId = 3L;
+    public ProductService(ProductRepository productRepository){
+        this.productRepository = productRepository;
+    }
     
     public List<Product> getProducts(){
-        return List.copyOf(products);
+        return productRepository.findAll();
     }
 
     public Product createProduct(CreateProductRequest request){
-
-        for (Product existingProduct : products) {
-            if(existingProduct.getSku().equals(request.sku())){
-                throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Product already exists with SKU: " + request.sku()
-                );
-            }
+        if(productRepository.existsBySku(request.sku())){
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Product already exists with SKU: " + request.sku()
+            );
         }
-        Product product = new Product(nextId ++, request.sku(), request.name(), request.price(), request.stockQuantity());
+        Product product = new Product(null, request.sku(), request.name(), request.price(), request.stockQuantity());
 
-        products.add(product);
-
-        return product;
+        return productRepository.save(product);
     }
 }
