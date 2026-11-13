@@ -3,11 +3,13 @@ package dev.stockflow.exception;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
 
 @RestControllerAdvice 
 public class GlobalExceptionHandler {
@@ -22,5 +24,15 @@ public class GlobalExceptionHandler {
                 errors.put(error.getField(), error.getDefaultMessage());
             }
             return errors;
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Map<String, String> handleDataIntegrityViolation(
+        DataIntegrityViolationException exception) {
+            return Map.of(
+                "message",
+                "The request conflicts with existing data or database constraints"
+            );
         }
 }
