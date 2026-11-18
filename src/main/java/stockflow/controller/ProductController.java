@@ -1,6 +1,7 @@
 package stockflow.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
@@ -36,6 +37,13 @@ public class ProductController {
     public Page<ProductResponse> getAllProducts(Pageable pageable){
         return productService.getAllProducts(pageable);
     }
+
+    @GetMapping("/search")
+    public Page<ProductResponse> searchProducts(
+        @RequestParam String name,
+        Pageable pageable) {
+            return productService.searchProducts(name, pageable);
+        }
 
     @PostMapping 
     @ResponseStatus(HttpStatus.CREATED)

@@ -2,6 +2,7 @@ package stockflow.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -297,5 +298,59 @@ public class ProductServiceTest {
 
         verify(productRepository).findAll(pageable);
     }
-    
+
+    @Test
+    void searchProducts_whenMatchesExist_returnsMatchingProducts() {
+
+        Product mouse = new Product(
+            "Wireless Mouse",
+            "MOUSE-001",
+            25,
+            new BigDecimal("29.99")
+        );
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Page<Product> productPage = new PageImpl<>(
+            List.of(mouse),
+            pageable,
+            1
+        );
+
+        when(productRepository.findByNameContainingIgnoreCase(
+                "mouse", pageable))
+            .thenReturn(productPage);
+
+        Page<ProductResponse> response =
+            productService.searchProducts("mouse", pageable);
+
+        assertEquals(1, response.getContent().size());
+        assertEquals("Wireless Mouse", response.getContent().get(0).name());
+        assertEquals(1, response.getTotalElements());
+
+        verify(productRepository)
+            .findByNameContainingIgnoreCase("mouse", pageable);
+    }
+
+    @Test
+    void searchProducts_whenNoMatchesExist_returnsEmptyPage() {
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Page<Product> emptyPage = Page.empty(pageable);
+
+        when(productRepository.findByNameContainingIgnoreCase(
+                "keyboard", pageable))
+            .thenReturn(emptyPage);
+
+        Page<ProductResponse> response =
+            productService.searchProducts("keyboard", pageable);
+
+        assertTrue(response.getContent().isEmpty());
+        assertEquals(0, response.getTotalElements());
+        assertEquals(0, response.getTotalPages());
+
+        verify(productRepository)
+            .findByNameContainingIgnoreCase("keyboard", pageable);
+    }
 }

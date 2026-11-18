@@ -1,6 +1,7 @@
 package stockflow.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -302,5 +303,66 @@ class ProductControllerTest {
 
         // Verify
         verify(productService).deleteProduct(999L);
+    }
+
+    @Test
+    void searchProducts_whenMatchesExist_returns200AndProducts()
+            throws Exception {
+
+        ProductResponse mouse = new ProductResponse(
+            2L,
+            "Wireless Mouse",
+            "MOUSE-001",
+            25,
+            new BigDecimal("29.99")
+        );
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Page<ProductResponse> productPage = new PageImpl<>(
+            List.of(mouse),
+            pageable,
+            1
+        );
+
+        when(productService.searchProducts(
+                eq("mouse"),
+                any(Pageable.class)))
+            .thenReturn(productPage);
+
+        mockMvc.perform(get("/api/products/search")
+                .param("name", "mouse")
+                .param("page", "0")
+                .param("size", "10"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].name")
+                .value("Wireless Mouse"))
+            .andExpect(jsonPath("$.content[0].sku")
+                .value("MOUSE-001"))
+            .andExpect(jsonPath("$.totalElements")
+                .value(1))
+            .andExpect(jsonPath("$.totalPages")
+                .value(1));
+    }
+
+    @Test
+    void searchProducts_whenNoMatchesExist_returns200AndEmptyPage()
+            throws Exception {
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        when(productService.searchProducts(
+                eq("keyboard"),
+                any(Pageable.class)))
+            .thenReturn(Page.empty(pageable));
+
+        mockMvc.perform(get("/api/products/search")
+                .param("name", "keyboard")
+                .param("page", "0")
+                .param("size", "10"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content").isEmpty())
+            .andExpect(jsonPath("$.totalElements").value(0))
+            .andExpect(jsonPath("$.totalPages").value(0));
     }
 }

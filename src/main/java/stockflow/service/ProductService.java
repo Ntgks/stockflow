@@ -26,6 +26,15 @@ public class ProductService {
             .map(this::toResponse);
     }
 
+    public Page<ProductResponse> searchProducts(
+        String name,
+        Pageable pageable){
+
+            return productRepository
+                .findByNameContainingIgnoreCase(name, pageable)
+                .map(this::toResponse);
+        }
+
     public ProductResponse createProduct(ProductRequest request){
         if (productRepository.existsBySku(request.sku())) {
             throw new DuplicateSkuException(request.sku());
