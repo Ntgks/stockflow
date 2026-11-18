@@ -1,6 +1,5 @@
 package stockflow.service;
 
-import java.util.List;
 import org.springframework.stereotype.Service;
 
 import stockflow.dto.ProductRequest;
@@ -10,6 +9,9 @@ import stockflow.repository.ProductRepository;
 
 import stockflow.exception.DuplicateSkuException;
 import stockflow.exception.ProductNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 @Service 
 public class ProductService {
     
@@ -19,11 +21,9 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
-    public List<ProductResponse> getAllProducts(){
-        return productRepository.findAll()
-            .stream()
-            .map(this::toResponse)
-            .toList();
+    public Page<ProductResponse> getAllProducts(Pageable pageable) {
+        return productRepository.findAll(pageable)
+            .map(this::toResponse);
     }
 
     public ProductResponse createProduct(ProductRequest request){

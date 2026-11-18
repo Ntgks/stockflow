@@ -24,6 +24,11 @@ import stockflow.exception.ProductNotFoundException;
 import stockflow.model.Product;
 import stockflow.repository.ProductRepository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 @ExtendWith(MockitoExtension.class)
 public class ProductServiceTest {
 
@@ -246,31 +251,51 @@ public class ProductServiceTest {
             20,
             new BigDecimal("25.99")
         );
-        
-        when(productRepository.findAll())
-            .thenReturn(List.of(laptop, mouse));
 
-        List<ProductResponse> response = productService.getAllProducts();
+        Pageable pageable = PageRequest.of(0, 10);
 
-        assertEquals(2, response.size());
-        assertEquals("Laptop", response.get(0).name());
-        assertEquals("LAP-001", response.get(0).sku());
-        assertEquals("Mouse", response.get(1).name());
-        assertEquals("MOUSE-001", response.get(1).sku());
+        Page<Product> productPage = new PageImpl<>(
+            List.of(laptop, mouse),
+            pageable,
+            2
+        );
 
-        verify(productRepository).findAll();
+        when(productRepository.findAll(pageable))
+            .thenReturn(productPage);
+
+        Page<ProductResponse> response = 
+            productService.getAllProducts(pageable);
+
+        assertEquals(2, response.getContent().size());
+        assertEquals("Laptop", response.getContent().get(0).name());
+        assertEquals("LAP-001", response.getContent().get(0).sku());
+        assertEquals("Mouse", response.getContent().get(1).name());
+        assertEquals("MOUSE-001", response.getContent().get(1).sku());
+
+        assertEquals(2, response.getTotalElements());
+        assertEquals(1, response.getTotalPages());
+
+        verify(productRepository).findAll(pageable);
     }
 
-    @Test 
-    void getAllProducts_whenNoProductsExist_returnsEmptyList() {
-        when(productRepository.findAll())
-            .thenReturn(List.of());
+    
+    @Test
+    void getAllProducts_whenNoProductsExist_returnsEmptyPage() {
+        Pageable pageable = PageRequest.of(0, 10);
 
-        List<ProductResponse> response = productService.getAllProducts();
+        Page<Product> emptyPage = Page.empty(pageable);
 
-        assertEquals(0, response.size());
-        verify(productRepository).findAll();
+        when(productRepository.findAll(pageable))
+            .thenReturn(emptyPage);
+
+        Page<ProductResponse> response =
+            productService.getAllProducts(pageable);
+
+        assertEquals(0, response.getContent().size());
+        assertEquals(0, response.getTotalElements());
+        assertEquals(0, response.getTotalPages());
+
+        verify(productRepository).findAll(pageable);
     }
-
     
 }

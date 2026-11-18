@@ -27,6 +27,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
+import org.springframework.data.domain.PageImpl;
+
 @WebMvcTest(ProductController.class)
 class ProductControllerTest {
 
@@ -36,17 +42,24 @@ class ProductControllerTest {
     @MockitoBean 
     private ProductService productService;
 
-    @Test 
-    void getAllProducts_whenEmpty_returns200AndEmptyJsonArray() throws Exception {
-        when(productService.getAllProducts())
-            .thenReturn(List.of());
+    @Test
+    void getAllProducts_whenEmpty_returns200AndEmptyPage() throws Exception {
+        Pageable pageable = PageRequest.of(0, 10);
 
-        mockMvc.perform(get("/api/products"))
+        when(productService.getAllProducts(any(Pageable.class)))
+            .thenReturn(Page.empty(pageable));
+
+        mockMvc.perform(get("/api/products")
+                .param("page", "0")
+                .param("size", "10"))
             .andExpect(status().isOk())
-            .andExpect(content().json("[]"));
+            .andExpect(jsonPath("$.content").isEmpty())
+            .andExpect(jsonPath("$.totalElements").value(0))
+            .andExpect(jsonPath("$.totalPages").value(0));
     }
 
-    @Test 
+    
+    @Test
     void getAllProducts_whenProductsExist_returns200AndProducts() throws Exception {
         ProductResponse product = new ProductResponse(
             1L,
@@ -55,24 +68,31 @@ class ProductControllerTest {
             10,
             new BigDecimal("999.99")
         );
-        
-        when(productService.getAllProducts())
-            .thenReturn(List.of(product));
 
-        mockMvc.perform(get("/api/products"))
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Page<ProductResponse> productPage = new PageImpl<>(
+            List.of(product),
+            pageable,
+            1
+        );
+
+        when(productService.getAllProducts(any(Pageable.class)))
+            .thenReturn(productPage);
+
+        mockMvc.perform(get("/api/products")
+                .param("page", "0")
+                .param("size", "10"))
             .andExpect(status().isOk())
-            .andExpect(content().json("""
-                [
-                    {
-                        "id": 1,
-                        "name": "Laptop",
-                        "sku": "LAP-001",
-                        "quantity": 10,
-                        "price": 999.99
-                    }
-                ]
-            """));
+            .andExpect(jsonPath("$.content[0].id").value(1))
+            .andExpect(jsonPath("$.content[0].name").value("Laptop"))
+            .andExpect(jsonPath("$.content[0].sku").value("LAP-001"))
+            .andExpect(jsonPath("$.content[0].quantity").value(10))
+            .andExpect(jsonPath("$.content[0].price").value(999.99))
+            .andExpect(jsonPath("$.totalElements").value(1))
+            .andExpect(jsonPath("$.totalPages").value(1));
     }
+
 
     @Test
     void getProductById_whenExists_returns200AndProduct() throws Exception {
