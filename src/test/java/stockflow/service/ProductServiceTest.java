@@ -353,4 +353,114 @@ public class ProductServiceTest {
         verify(productRepository)
             .findByNameContainingIgnoreCase("keyboard", pageable);
     }
+
+    @Test
+    void stockIn_whenProductExists_increasesQuantity() {
+
+        // Arrange
+        Product product = new Product(
+            "Wireless Mouse",
+            "MOUSE-001",
+            25,
+            new BigDecimal("29.99")
+        );
+
+        when(productRepository.findById(1L))
+            .thenReturn(Optional.of(product));
+
+        // Act
+        ProductResponse response = productService.stockIn(1L, 10);
+
+        // Assert
+        assertEquals(35, response.quantity());
+        assertEquals(35, product.getQuantity());
+
+        verify(productRepository).findById(1L);
+    }
+
+    @Test
+    void stockOut_whenEnoughStock_decreasesQuantity() {
+
+        // Arrange
+        Product product = new Product(
+            "Wireless Mouse",
+            "MOUSE-001",
+            25,
+            new BigDecimal("29.99")
+        );
+
+        when(productRepository.findById(1L))
+            .thenReturn(Optional.of(product));
+
+        // Act
+        ProductResponse response = productService.stockOut(1L, 5);
+
+        // Assert
+        assertEquals(20, response.quantity());
+        assertEquals(20, product.getQuantity());
+
+        verify(productRepository).findById(1L);
+    }
+
+    @Test
+    void stockOut_whenInsufficientStock_throwsException() {
+
+        // Arrange
+        Product product = new Product(
+            "Wireless Mouse",
+            "MOUSE-001",
+            25,
+            new BigDecimal("29.99")
+        );
+
+        when(productRepository.findById(1L))
+            .thenReturn(Optional.of(product));
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(
+            IllegalArgumentException.class,
+            () -> productService.stockOut(1L, 50)
+        );
+
+        assertEquals(
+            "Insufficient stock. Available: 25, requested: 50",
+            exception.getMessage()
+        );
+
+        assertEquals(25, product.getQuantity());
+
+        verify(productRepository).findById(1L);
+    }
+
+    @Test
+    void stockIn_whenProductDoesNotExist_throwsException() {
+
+        // Arrange
+        when(productRepository.findById(999L))
+            .thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(
+            ProductNotFoundException.class,
+            () -> productService.stockIn(999L, 10)
+        );
+
+        verify(productRepository).findById(999L);
+    }
+
+    @Test
+    void stockOut_whenProductDoesNotExist_throwsException() {
+
+        // Arrange
+        when(productRepository.findById(999L))
+            .thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(
+            ProductNotFoundException.class,
+            () -> productService.stockOut(999L, 5)
+        );
+
+        verify(productRepository).findById(999L);
+    }
 }

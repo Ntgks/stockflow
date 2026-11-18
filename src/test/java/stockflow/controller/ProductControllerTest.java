@@ -2,6 +2,7 @@ package stockflow.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,6 +23,7 @@ import stockflow.service.ProductService;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -357,6 +359,7 @@ class ProductControllerTest {
             .thenReturn(Page.empty(pageable));
 
         mockMvc.perform(get("/api/products/search")
+
                 .param("name", "keyboard")
                 .param("page", "0")
                 .param("size", "10"))
@@ -364,5 +367,157 @@ class ProductControllerTest {
             .andExpect(jsonPath("$.content").isEmpty())
             .andExpect(jsonPath("$.totalElements").value(0))
             .andExpect(jsonPath("$.totalPages").value(0));
+    }
+
+    @Test
+    void stockIn_whenValid_returns200AndUpdatedQuantity() throws Exception {
+
+        // Arrange
+        ProductResponse updatedProduct = new ProductResponse(
+            1L,
+            "Wireless Mouse",
+            "MOUSE-001",
+            35,
+            new BigDecimal("29.99")
+        );
+
+        when(productService.stockIn(1L, 10))
+            .thenReturn(updatedProduct);
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/products/1/stock/in")
+                .contentType("application/json")
+                .content("""
+                    {
+                        "quantity": 10
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(1))
+            .andExpect(jsonPath("$.name").value("Wireless Mouse"))
+            .andExpect(jsonPath("$.quantity").value(35));
+
+        // Verify
+        verify(productService).stockIn(1L, 10);
+    }
+
+    @Test
+    void stockOut_whenValid_returns200AndUpdatedQuantity() throws Exception {
+
+        // Arrange
+        ProductResponse updatedProduct = new ProductResponse(
+            1L,
+            "Wireless Mouse",
+            "MOUSE-001",
+            20,
+            new BigDecimal("29.99")
+        );
+
+        when(productService.stockOut(1L, 5))
+            .thenReturn(updatedProduct);
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/products/1/stock/out")
+                .contentType("application/json")
+                .content("""
+                    {
+                        "quantity": 5
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(1))
+            .andExpect(jsonPath("$.name").value("Wireless Mouse"))
+            .andExpect(jsonPath("$.quantity").value(20));
+
+        // Verify
+        verify(productService).stockOut(1L, 5);
+    }
+
+    @Test
+    void stockOut_whenInsufficientStock_returns409() throws Exception {
+
+        // Arrange
+        when(productService.stockOut(1L, 50))
+            .thenThrow(new IllegalArgumentException(
+                "Insufficient stock. Available: 25, requested: 50"
+            ));
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/products/1/stock/out")
+                .contentType("application/json")
+                .content("""
+                    {
+                        "quantity": 50
+                    }
+                    """))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.error").value(
+                "Insufficient stock. Available: 25, requested: 50"
+            ));
+
+        // Verify
+        verify(productService).stockOut(1L, 50);
+    }
+
+    @Test
+    void stockIn_whenQuantityIsZero_returns400() throws Exception {
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/products/1/stock/in")
+                .contentType("application/json")
+                .content("""
+                    {
+                        "quantity": 0
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.quantity")
+                .value("Quantity must be at least 1"));
+
+        // Verify
+        verify(productService, never()).stockIn(
+            any(Long.class),
+            any(Integer.class)
+        );
+    }
+
+    @Test
+    void stockOut_whenQuantityIsNegative_returns400() throws Exception {
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/products/1/stock/out")
+                .contentType("application/json")
+                .content("""
+                    {
+                        "quantity": -5
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.quantity")
+                .value("Quantity must be at least 1"));
+
+        // Verify
+        verify(productService, never()).stockOut(
+            any(Long.class),
+            any(Integer.class)
+        );
+    }
+
+    @Test
+    void stockIn_whenQuantityIsMissing_returns400() throws Exception {
+
+        // Act & Assert
+        mockMvc.perform(patch("/api/products/1/stock/in")
+                .contentType("application/json")
+                .content("{}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.quantity")
+                .value("Quantity is required"));
+
+        // Verify
+        verify(productService, never()).stockIn(
+            any(Long.class),
+            any(Integer.class)
+        );
     }
 }

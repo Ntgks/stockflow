@@ -2,6 +2,7 @@ package stockflow.service;
 
 import org.springframework.stereotype.Service;
 
+import jakarta.transaction.Transactional;
 import stockflow.dto.ProductRequest;
 import stockflow.dto.ProductResponse;
 import stockflow.model.Product;
@@ -92,5 +93,39 @@ public class ProductService {
             .orElseThrow(() -> new ProductNotFoundException(id));
 
         productRepository.delete(product);
+
+    }
+    
+
+    @Transactional 
+    public ProductResponse stockIn(Long id, Integer quantity) {
+        Product product = productRepository.findById(id)
+            .orElseThrow(() ->
+                new ProductNotFoundException(id)
+            );
+
+        product.setQuantity(product.getQuantity() + quantity);
+
+        return toResponse(product);  
+    }
+
+    @Transactional 
+    public ProductResponse stockOut(Long id, Integer quantity) {
+        Product product = productRepository.findById(id)
+            .orElseThrow(() -> 
+                new ProductNotFoundException(id)
+            );
+
+        if (product.getQuantity() < quantity) {
+            throw new IllegalArgumentException(
+                "Insufficient stock. Available: " 
+                + product.getQuantity()
+                + ", requested: " + quantity
+            );
+        }
+
+        product.setQuantity(product.getQuantity() - quantity);
+
+        return toResponse(product);
     }
 }

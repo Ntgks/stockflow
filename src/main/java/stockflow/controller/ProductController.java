@@ -7,10 +7,12 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import stockflow.dto.ProductRequest;
 import stockflow.dto.ProductResponse;
+import stockflow.dto.StockRequest;
 import stockflow.service.ProductService;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -69,6 +71,18 @@ public class ProductController {
         productService.deleteProduct(id);
     } 
     
-    
+    @PatchMapping("/{id}/stock/in")
+    public ProductResponse stockIn(
+        @PathVariable Long id,
+        @Valid @RequestBody StockRequest request) {
+            return productService.stockIn(id, request.quantity());
+    }
+
+    @PatchMapping("/{id}/stock/out")
+    public ProductResponse stockOut(
+        @PathVariable Long id,
+        @Valid @RequestBody StockRequest request) {
+            return productService.stockOut(id, request.quantity());
+    }
 
 }
